@@ -5,7 +5,7 @@ import { Student } from '../types';
 import { CustomPointsModal, AssignTaskModal, StudentStatsModal } from './Modals';
 
 export const TeacherDashboard: React.FC = () => {
-  const { students, pointLogs, addGlobalPoints, addPointLog, getStudentTotalPoints } = useAppContext();
+  const { students, pointLogs, tasks, addGlobalPoints, addPointLog, getStudentTotalPoints } = useAppContext();
   
   const [selectedStudentForPoints, setSelectedStudentForPoints] = useState<Student | null>(null);
   const [selectedStudentForTask, setSelectedStudentForTask] = useState<Student | null>(null);
@@ -84,6 +84,7 @@ export const TeacherDashboard: React.FC = () => {
               <tr className="bg-slate-50 text-slate-500 text-sm uppercase tracking-wider">
                 <th className="p-4 font-medium">Diák</th>
                 <th className="p-4 font-medium text-center">Gyors Pontok</th>
+                <th className="p-4 font-medium text-center">Aktuális Feladatok</th>
                 <th className="p-4 font-medium text-center">Összpontszám</th>
                 <th className="p-4 font-medium text-right">Műveletek</th>
               </tr>
@@ -126,6 +127,19 @@ export const TeacherDashboard: React.FC = () => {
                           </button>
                         ))}
                       </div>
+                    </div>
+                  </td>
+                  <td className="p-4">
+                    <div className="flex flex-wrap justify-center gap-1 max-w-[200px] mx-auto">
+                      {tasks.filter(t => t.studentId === student.id && t.status === 'active').length > 0 ? (
+                        tasks.filter(t => t.studentId === student.id && t.status === 'active').map(task => (
+                          <span key={task.id} className="text-[10px] bg-crea-purple/10 text-crea-purple px-2 py-0.5 rounded-full font-medium truncate max-w-[150px]" title={task.title}>
+                            {task.title}
+                          </span>
+                        ))
+                      ) : (
+                        <span className="text-xs text-slate-400">-</span>
+                      )}
                     </div>
                   </td>
                   <td className="p-4 text-center">
