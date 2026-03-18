@@ -1,15 +1,16 @@
 import React, { useState } from 'react';
 import { useAppContext } from '../context/AppContext';
-import { Users, Star, Plus, Minus, Gift, ClipboardList, BarChart2 } from 'lucide-react';
+import { Users, Star, Plus, Minus, Gift, ClipboardList, BarChart2, Check } from 'lucide-react';
 import { Student } from '../types';
 import { CustomPointsModal, AssignTaskModal, StudentStatsModal } from './Modals';
 
 export const TeacherDashboard: React.FC = () => {
-  const { students, pointLogs, tasks, addGlobalPoints, addPointLog, getStudentTotalPoints } = useAppContext();
+  const { students, pointLogs, tasks, addGlobalPoints, addPointLog, getStudentTotalPoints, completeTask } = useAppContext();
   
   const [selectedStudentForPoints, setSelectedStudentForPoints] = useState<Student | null>(null);
   const [selectedStudentForTask, setSelectedStudentForTask] = useState<Student | null>(null);
   const [selectedStudentForStats, setSelectedStudentForStats] = useState<Student | null>(null);
+  const [completingTasks, setCompletingTasks] = useState<Set<string>>(new Set());
 
   const totalStudents = students.length;
   const totalPoints = pointLogs.reduce((sum, log) => sum + log.amount, 0);
@@ -20,6 +21,18 @@ export const TeacherDashboard: React.FC = () => {
 
   const handleQuickPoint = (studentId: string, amount: number) => {
     addPointLog(studentId, amount, amount > 0 ? 'Gyors pont' : 'Gyors levonás');
+  };
+
+  const handleCompleteTask = (taskId: string) => {
+    setCompletingTasks((prev) => new Set(prev).add(taskId));
+    setTimeout(() => {
+      completeTask(taskId);
+      setCompletingTasks((prev) => {
+        const next = new Set(prev);
+        next.delete(taskId);
+        return next;
+      });
+    }, 400); // 400ms animation duration
   };
 
   return (
@@ -78,7 +91,7 @@ export const TeacherDashboard: React.FC = () => {
         <div className="p-6 border-b border-crea-light">
           <h2 className="text-xl font-bold text-slate-800">Diákok</h2>
         </div>
-        <div className="overflow-x-auto">
+        <div className="hidden md:block overflow-x-auto">
           <table className="w-full text-left border-collapse">
             <thead>
               <tr className="bg-slate-50 text-slate-500 text-sm uppercase tracking-wider">
@@ -98,7 +111,7 @@ export const TeacherDashboard: React.FC = () => {
                       onClick={() => setSelectedStudentForStats(student)}
                     >
                       <img src={student.avatar} alt={student.name} className="w-10 h-10 rounded-full bg-slate-100" />
-                      <span className="font-medium text-slate-800 group-hover:text-crea-teal transition-colors">{student.name}</span>
+                      <span className="font-medium text-slate-800 group-hover:text-crea-teal transition-colors whitespace-nowrap">{student.name}</span>
                     </div>
                   </td>
                   <td className="p-4">
@@ -130,12 +143,36 @@ export const TeacherDashboard: React.FC = () => {
                     </div>
                   </td>
                   <td className="p-4">
-                    <div className="flex flex-wrap justify-center gap-1 max-w-[200px] mx-auto">
+                    <div className="flex flex-wrap justify-center gap-2 max-w-[250px] mx-auto">
                       {tasks.filter(t => t.studentId === student.id && t.status === 'active').length > 0 ? (
                         tasks.filter(t => t.studentId === student.id && t.status === 'active').map(task => (
-                          <span key={task.id} className="text-[10px] bg-crea-purple/10 text-crea-purple px-2 py-0.5 rounded-full font-medium truncate max-w-[150px]" title={task.title}>
-                            {task.title}
-                          </span>
+                          <div 
+                            key={task.id} 
+                            className={`flex items-center gap-1 pl-2 pr-1 py-1 rounded-full text-xs font-medium border transition-all duration-300 ${
+                              completingTasks.has(task.id) 
+                                ? 'bg-emerald-500 text-white border-emerald-500 scale-105 shadow-lg shadow-emerald-500/50' 
+                                : 'bg-crea-purple/10 text-crea-purple border-crea-purple/20'
+                            }`}
+                          >
+                            <span className="truncate max-w-[120px]" title={task.title}>{task.title}</span>
+                            <span className={`px-1.5 py-0.5 rounded-full text-[10px] font-bold transition-colors duration-300 ${
+                              completingTasks.has(task.id) ? 'bg-white/20 text-white' : 'bg-white text-crea-purple'
+                            }`}>
+                              +{task.rewardPoints}
+                            </span>
+                            <button 
+                              onClick={() => handleCompleteTask(task.id)}
+                              disabled={completingTasks.has(task.id)}
+                              className={`p-1 rounded-full transition-all duration-300 ${
+                                completingTasks.has(task.id)
+                                  ? 'bg-white text-emerald-500 scale-110'
+                                  : 'bg-emerald-100 text-emerald-600 hover:bg-emerald-500 hover:text-white'
+                              }`}
+                              title="Feladat teljesítve"
+                            >
+                              <Check className="w-3 h-3" />
+                            </button>
+                          </div>
                         ))
                       ) : (
                         <span className="text-xs text-slate-400">-</span>
@@ -176,6 +213,119 @@ export const TeacherDashboard: React.FC = () => {
               ))}
             </tbody>
           </table>
+        </div>
+
+        {/* Mobile View */}
+        <div className="block md:hidden divide-y divide-crea-light">
+          {students.map((student) => (
+            <div key={student.id} className="p-4">
+              <div className="flex items-center justify-between mb-4">
+                <div 
+                  className="flex items-center space-x-3 cursor-pointer group"
+                  onClick={() => setSelectedStudentForStats(student)}
+                >
+                  <img src={student.avatar} alt={student.name} className="w-10 h-10 rounded-full bg-slate-100" />
+                  <span className="font-medium text-slate-800 group-hover:text-crea-teal transition-colors">{student.name}</span>
+                </div>
+                <span className="inline-flex items-center justify-center px-3 py-1 rounded-full bg-slate-100 text-slate-800 font-bold">
+                  {getStudentTotalPoints(student.id)}
+                </span>
+              </div>
+              
+              {/* Quick Points */}
+              <div className="mb-4">
+                <p className="text-xs text-slate-500 mb-2 uppercase tracking-wider font-medium">Gyors Pontok</p>
+                <div className="flex flex-wrap items-center gap-2">
+                  {/* Negative Points */}
+                  <div className="flex space-x-1">
+                    {[-1, -2, -3, -4, -5].map((val) => (
+                      <button
+                        key={val}
+                        onClick={() => handleQuickPoint(student.id, val)}
+                        className="w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold text-red-600 bg-red-50 hover:bg-red-100 hover:scale-110 transition-all"
+                      >
+                        {val}
+                      </button>
+                    ))}
+                  </div>
+                  {/* Positive Points */}
+                  <div className="flex space-x-1">
+                    {[1, 2, 3, 4, 5].map((val) => (
+                      <button
+                        key={val}
+                        onClick={() => handleQuickPoint(student.id, val)}
+                        className="w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold text-emerald-600 bg-emerald-50 hover:bg-emerald-100 hover:scale-110 transition-all"
+                      >
+                        +{val}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </div>
+
+              {/* Active Tasks */}
+              <div className="mb-4">
+                <p className="text-xs text-slate-500 mb-2 uppercase tracking-wider font-medium">Aktuális Feladatok</p>
+                <div className="flex flex-wrap gap-2">
+                  {tasks.filter(t => t.studentId === student.id && t.status === 'active').length > 0 ? (
+                    tasks.filter(t => t.studentId === student.id && t.status === 'active').map(task => (
+                      <div 
+                        key={task.id} 
+                        className={`flex items-center gap-1 pl-2 pr-1 py-1 rounded-full text-xs font-medium border transition-all duration-300 ${
+                          completingTasks.has(task.id) 
+                            ? 'bg-emerald-500 text-white border-emerald-500 scale-105 shadow-lg shadow-emerald-500/50' 
+                            : 'bg-crea-purple/10 text-crea-purple border-crea-purple/20'
+                        }`}
+                      >
+                        <span className="truncate max-w-[150px]" title={task.title}>{task.title}</span>
+                        <span className={`px-1.5 py-0.5 rounded-full text-[10px] font-bold transition-colors duration-300 ${
+                          completingTasks.has(task.id) ? 'bg-white/20 text-white' : 'bg-white text-crea-purple'
+                        }`}>
+                          +{task.rewardPoints}
+                        </span>
+                        <button 
+                          onClick={() => handleCompleteTask(task.id)}
+                          disabled={completingTasks.has(task.id)}
+                          className={`p-1 rounded-full transition-all duration-300 ${
+                            completingTasks.has(task.id)
+                              ? 'bg-white text-emerald-500 scale-110'
+                              : 'bg-emerald-100 text-emerald-600 hover:bg-emerald-500 hover:text-white'
+                          }`}
+                          title="Feladat teljesítve"
+                        >
+                          <Check className="w-3 h-3" />
+                        </button>
+                      </div>
+                    ))
+                  ) : (
+                    <span className="text-xs text-slate-400">-</span>
+                  )}
+                </div>
+              </div>
+
+              {/* Actions */}
+              <div className="flex items-center space-x-2">
+                <button 
+                  onClick={() => setSelectedStudentForPoints(student)}
+                  className="flex-1 flex items-center justify-center p-2 text-crea-teal bg-crea-teal/10 hover:bg-crea-teal/20 rounded-xl transition-colors text-sm font-medium"
+                >
+                  <Plus className="w-4 h-4 mr-1" /> Pont
+                </button>
+                <button 
+                  onClick={() => setSelectedStudentForTask(student)}
+                  className="flex-1 flex items-center justify-center p-2 text-crea-purple bg-crea-purple/10 hover:bg-crea-purple/20 rounded-xl transition-colors text-sm font-medium"
+                >
+                  <ClipboardList className="w-4 h-4 mr-1" /> Feladat
+                </button>
+                <button 
+                  onClick={() => setSelectedStudentForStats(student)}
+                  className="flex-1 flex items-center justify-center p-2 text-slate-600 bg-slate-100 hover:bg-slate-200 rounded-xl transition-colors text-sm font-medium"
+                >
+                  <BarChart2 className="w-4 h-4 mr-1" /> Stat
+                </button>
+              </div>
+            </div>
+          ))}
         </div>
       </div>
 
